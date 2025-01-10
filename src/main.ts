@@ -24,12 +24,11 @@ function validateBotKey(botKey: string): boolean {
 
 // 发送消息到企业微信机器人的函数，支持多种消息类型
 async function sendMessageToWeComBot(
-  botKey: string,
+  botKey: string[],
   type: MessageTypeValue,
   message: string
 ): Promise<void> {
-  const url = `${WeComBotHookBaseUrl}?key=${encodeURIComponent(botKey)}`
-  let payload
+  let payload: any
 
   switch (type) {
     case MessageType.TEXT:
@@ -37,7 +36,6 @@ async function sendMessageToWeComBot(
       break
     case MessageType.MARKDOWN:
       payload = {msgtype: 'markdown', markdown: {content: message}}
-      core.debug(`payload: ${payload}`)
       break
     case MessageType.IMAGE:
       // message should be base64 encoded image
@@ -57,11 +55,23 @@ async function sendMessageToWeComBot(
   }
 
   try {
-    const res = await axios.post(url, payload)
-    // core.info('Message sent to WeCom Bot successfully.')
-    core.info(
-      `${MessageType.MARKDOWN} ${type} ${JSON.stringify(payload)} ${JSON.stringify(res.data)}`
-    )
+    // 发送消息到企业微信机器人
+    core.info('Sending message to WeCom Bot...')
+    const tasks = botKey.map(key => {
+      return async () => {
+        if (!validateBotKey(key)) {
+          core.setFailed('Invalid or missing wecom bot hook key.')
+          return
+        }
+        const url = `${WeComBotHookBaseUrl}?key=${encodeURIComponent(key)}`
+        const res = await axios.post(url, payload)
+        core.info('Message sent to WeCom Bot successfully.')
+        core.info(
+          `${MessageType.MARKDOWN} ${type} ${JSON.stringify(payload)} ${JSON.stringify(res.data)}`
+        )
+      }
+    })
+    await Promise.all(tasks)
   } catch (error: any) {
     core.error(`Failed to send message to WeCom Bot: ${error.message}`)
     core.setFailed(error)
@@ -70,11 +80,9 @@ async function sendMessageToWeComBot(
 }
 
 async function run() {
-  const wxWorkBotKey = core.getInput('key', {required: true})
-  if (!validateBotKey(wxWorkBotKey)) {
-    core.setFailed('Invalid or missing wecom bot hook key.')
-    return
-  }
+  const keyStr = core.getInput('key', {required: true})
+
+  const keys = keyStr.split(',')
 
   // 获取消息内容和消息类型
   const msgContent = core.getInput('content', {required: true})
@@ -102,7 +110,7 @@ async function run() {
   core.debug(`Message Type: ${msgType}`)
 
   // 发送消息
-  await sendMessageToWeComBot(wxWorkBotKey, msgType, msgContent)
+  await sendMessageToWeComBot(keys, msgType, msgContent)
 }
 
 run()

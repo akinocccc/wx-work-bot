@@ -21,3 +21,6 @@ jobs:
           content: '## Test' # see https://developer.work.weixin.qq.com/document/path/91770
           key: ${{ secrets.WECOM_BOT_KEY }} # Your key of wecom bot hook
 ```
+
+> [!TIP]
+> If you want to send message to multiple wecom bot, you can use `,` to split the bot keys.
