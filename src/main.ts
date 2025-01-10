@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
 import axios from 'axios'
-import Base64 from 'js-base64'
+import {decode} from 'js-base64'
 
 enum MessageType {
   TEXT = 'text',
@@ -41,7 +41,7 @@ async function sendMessageToWeComBot(
       // message should be base64 encoded image
       payload = {
         msgtype: 'image',
-        image: {base64: message, md5: Base64.decode(message)}
+        image: {base64: message, md5: decode(message)}
       } // 需要图片的base64和md5值
       break
     case MessageType.NEWS:
